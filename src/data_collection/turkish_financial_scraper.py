@@ -25,8 +25,9 @@ sys.path.append(str(Path(__file__).resolve().parents[2]))
 # -----------------------------------------
 
 # Yeni eklenen importlar
-from src.utils.database_manager import DatabaseManager
-from config.config import TABLE_NAMES
+
+from src.utils.mongodb_manager import MongoDBManager
+from config.config import TABLE_NAMES, MONGODB_COLLECTIONS
 
 warnings.filterwarnings('ignore')
 
@@ -261,13 +262,40 @@ class TurkishFinancialScraper:
         ) as progress:
             task = progress.add_task("Veriler senkronize ediliyor...", total=None)
             
-            # Başlangıç DataFrame'i olarak en kapsamlı olduğunu varsaydığımız USD verisini alalım
-            if usd_df is None or usd_df.empty:
-                self.console.print("[red]❌ Senkronizasyon için temel USD verisi bulunamadı. İşlem durduruldu.[/red]")
+            # Tüm veri setlerinden en geniş tarih aralığını bul
+            all_dates = set()
+            
+            if usd_df is not None and not usd_df.empty:
+                all_dates.update(usd_df[['year', 'month']].apply(lambda x: (x['year'], x['month']), axis=1))
+            
+            if tufe_df is not None and not tufe_df.empty:
+                all_dates.update(tufe_df[['year', 'month']].apply(lambda x: (x['year'], x['month']), axis=1))
+            
+            if repo_df is not None and not repo_df.empty:
+                all_dates.update(repo_df[['year', 'month']].apply(lambda x: (x['year'], x['month']), axis=1))
+            
+            if not all_dates:
+                self.console.print("[red]❌ Senkronizasyon için hiçbir veri bulunamadı. İşlem durduruldu.[/red]")
                 progress.update(task, completed=True)
                 return pd.DataFrame()
+            
+            # En geniş tarih aralığından base DataFrame oluştur
+            sorted_dates = sorted(all_dates)
+            base_data = []
+            for year, month in sorted_dates:
+                base_data.append({
+                    'year': year,
+                    'month': month,
+                    'date': f"{year}-{month:02d}"
+                })
+            
+            base_df = pd.DataFrame(base_data)
 
-            base_df = usd_df[['year', 'month', 'date', 'usd_avg']].copy()
+            # USD verilerini merge et
+            if usd_df is not None and not usd_df.empty:
+                base_df = pd.merge(base_df, usd_df[['year', 'month', 'usd_avg']], on=['year', 'month'], how='left')
+            else:
+                base_df['usd_avg'] = None
 
             # TÜFE verilerini merge et
             if tufe_df is not None:
@@ -276,21 +304,29 @@ class TurkishFinancialScraper:
                 base_df['tufe_rate'] = None
 
             # Repo faiz verilerini merge et
-            if repo_df is not None:
+            if repo_df is not None and not repo_df.empty:
                 base_df = pd.merge(base_df, repo_df[['year', 'month', 'lend_rate']], on=['year', 'month'], how='left')
             else:
                 base_df['lend_rate'] = None
             
-            # Eksik değerleri doldur: Önceki aydan veri taşı (forward fill)
-            base_df[['usd_avg', 'tufe_rate', 'lend_rate']] = base_df[['usd_avg', 'tufe_rate', 'lend_rate']].fillna(method='ffill')
+            # Sadece tüm değişkenlerin mevcut olduğu satırları tut
+            numeric_columns = ['usd_avg', 'tufe_rate', 'lend_rate']
+            available_columns = [col for col in numeric_columns if col in base_df.columns]
             
-            # Başlangıçta kalmış olabilecek NaN değerleri sonraki aydan veri taşıyarak doldur (backward fill)
-            base_df = base_df.fillna(method='bfill')
-
-            # Her ihtimale karşı yine de NaN kalmışsa, sıfır ile doldur ve kullanıcıyı uyar
-            if base_df.isnull().values.any():
-                self.console.print("[yellow]⚠️ Doldurma sonrası hala eksik veri mevcut. Bu veriler 0 ile doldurulacak.[/yellow]")
-                base_df = base_df.fillna(0)
+            if available_columns:
+                # Tüm değişkenlerin mevcut olduğu satırları filtrele
+                base_df = base_df.dropna(subset=available_columns)
+                
+                if base_df.empty:
+                    self.console.print("[red]❌ Tüm değişkenlerin mevcut olduğu veri bulunamadı.[/red]")
+                    progress.update(task, completed=True)
+                    return pd.DataFrame()
+                
+                self.console.print(f"[green]✅ {len(base_df)} satır veri (tüm değişkenler mevcut) senkronize edildi.[/green]")
+            else:
+                self.console.print("[red]❌ Hiçbir sayısal değişken bulunamadı.[/red]")
+                progress.update(task, completed=True)
+                return pd.DataFrame()
 
             progress.update(task, completed=True)
             return base_df.sort_values(['year', 'month']).reset_index(drop=True)
@@ -322,8 +358,12 @@ class TurkishFinancialScraper:
         return table
 
     def get_arima_ready_data(self, start_year=2020):
-        """ARIMA modeli için hazır veri seti döndür"""
+        """ARIMA modeli için hazır veri seti döndür - Güncel tarihe kadar"""
         self.print_header("🤖 ARIMA Modeli için Veri Hazırlığı")
+        
+        # Güncel tarihe kadar veri çek
+        current_year = datetime.now().year
+        self.console.print(f"[cyan]📅 Veri çekme aralığı: {start_year} - {current_year}[/cyan]")
         
         usd_df = self.get_historical_usd_try(start_year)
         tufe_df = self.get_historical_tufe()
@@ -358,28 +398,111 @@ class TurkishFinancialScraper:
         return synchronized_df
 
     def save_data_to_db(self, synchronized_df):
-        """Senkronize veriyi PostgreSQL veritabanına kaydeder."""
+        """Senkronize veriyi hem PostgreSQL hem de MongoDB'ye kaydeder."""
         if synchronized_df.empty:
             self.console.print("[yellow]⚠️ Kaydedilecek veri bulunmadığı için veritabanı işlemi yapılmadı.[/yellow]")
             return False
         
+        success_count = 0
+        total_attempts = 0
+        
+        # PostgreSQL'e kaydetme kısmı kaldırıldı (Sadece MongoDB kullanılıyor)
+        # try:
+        #     self.console.print("\n[bold]💾 PostgreSQL'e Kaydetme[/bold]")
+        #     total_attempts += 1
+        #     db_manager = DatabaseManager(env='production')
+        #     
+        #     if db_manager.engine is not None:
+        #         table_name = TABLE_NAMES.get('economic_data', 'financial_data_raw')
+        #         db_manager.save_dataframe(synchronized_df, table_name=table_name, if_exists='replace')
+        #         self.console.print(f"[green]✅ Veri başarıyla PostgreSQL [bold]{table_name}[/bold] tablosuna kaydedildi![/green]")
+        #         success_count += 1
+        #     else:
+        #         self.console.print("[yellow]⚠️ PostgreSQL bağlantısı kurulamadı, MongoDB'ye kaydediliyor.[/yellow]")
+        #         
+        # except Exception as e:
+        #     self.console.print(f"[yellow]⚠️ PostgreSQL'e kaydetme hatası: {e}[/yellow]")
+        
+        # MongoDB'ye kaydetme
         try:
-            self.console.print("\n[bold]💾 Veritabanına Kaydetme[/bold]")
-            db_manager = DatabaseManager(env='production')
+            self.console.print("\n[bold]💾 MongoDB'ye Kaydetme[/bold]")
+            total_attempts += 1
+            mongodb_manager = MongoDBManager()
             
-            # Eğer bağlantı başarısızsa işlemi durdur
-            if db_manager.engine is None:
-                self.console.print("[bold red]❌ Veritabanı bağlantısı kurulamadı. Kaydetme işlemi iptal edildi.[/bold red]")
-                return False
-
-            table_name = TABLE_NAMES.get('economic_data', 'financial_data_raw')
-            db_manager.save_dataframe(synchronized_df, table_name=table_name, if_exists='replace')
-            
-            self.console.print(f"[green]✅ Veri başarıyla [bold]{table_name}[/bold] tablosuna kaydedildi![/green]")
-            return True
-            
+            if mongodb_manager.client is not None and mongodb_manager.database is not None:
+                collection_name = MONGODB_COLLECTIONS.get('economic_indicators', 'economic_indicators')
+                
+                # DataFrame'i standart MongoDB belgelerine dönüştür
+                documents = []
+                current_time = datetime.utcnow()
+                
+                for _, row in synchronized_df.iterrows():
+                    # Standart veri yapısı oluştur
+                    doc = {
+                        'date': row.get('date', current_time.date()),
+                        'created_at': current_time,
+                        'updated_at': current_time,
+                        'source': 'TurkishFinancialScraper',
+                        'data_type': 'economic_indicators'
+                    }
+                    
+                    # Scraping modülünden gelen verileri standart alanlara eşleştir
+                    # USD/TRY kuru
+                    if 'usd_avg' in row and pd.notna(row['usd_avg']):
+                        doc['usd_try'] = float(row['usd_avg'])
+                    elif 'usd_try' in row and pd.notna(row['usd_try']):
+                        doc['usd_try'] = float(row['usd_try'])
+                    
+                    # EUR/TRY kuru (varsa)
+                    if 'eur_try' in row and pd.notna(row['eur_try']):
+                        doc['eur_try'] = float(row['eur_try'])
+                    
+                    # Faiz oranları
+                    if 'lend_rate' in row and pd.notna(row['lend_rate']):
+                        doc['policy_rate'] = float(row['lend_rate'])
+                    elif 'policy_rate' in row and pd.notna(row['policy_rate']):
+                        doc['policy_rate'] = float(row['policy_rate'])
+                    
+                    # Enflasyon oranı
+                    if 'tufe_rate' in row and pd.notna(row['tufe_rate']):
+                        doc['inflation_rate'] = float(row['tufe_rate'])
+                    
+                    # Tarih bilgileri
+                    if 'year' in row and pd.notna(row['year']):
+                        doc['year'] = int(row['year'])
+                    if 'month' in row and pd.notna(row['month']):
+                        doc['month'] = int(row['month'])
+                    
+                    # Diğer alanları koru
+                    for col in synchronized_df.columns:
+                        if col not in ['date', 'created_at', 'updated_at', 'source']:
+                            if col not in doc:  # Eğer standart eşleştirme yapılmadıysa
+                                doc[col] = row[col]
+                    
+                    documents.append(doc)
+                
+                # Belgeleri ekle
+                inserted_ids = mongodb_manager.insert_many_documents(collection_name, documents)
+                if inserted_ids:
+                    self.console.print(f"[green]✅ Veri başarıyla MongoDB [bold]{collection_name}[/bold] koleksiyonuna kaydedildi! ({len(documents)} belge)[/green]")
+                    success_count += 1
+                else:
+                    self.console.print("[red]❌ MongoDB'ye veri eklenemedi.[/red]")
+                
+                # Bağlantıyı kapat
+                mongodb_manager.close_connection()
+            else:
+                self.console.print("[yellow]⚠️ MongoDB bağlantısı kurulamadı.[/yellow]")
+                
         except Exception as e:
-            self.console.print(f"[red]❌ Veri veritabanına kaydedilemedi: {e}[/red]")
+            self.console.print(f"[red]❌ MongoDB'ye kaydetme hatası: {e}[/red]")
+        
+        # Sonuç özeti
+        if success_count > 0:
+            self.console.print(f"\n[green]🎉 Toplam {success_count}/{total_attempts} veritabanına başarıyla kaydedildi![/green]")
+            return True
+        else:
+            self.console.print(f"\n[red]❌ Hiçbir veritabanına kaydedilemedi![/red]")
             return False
 
 def run_scraper():

@@ -1,262 +1,238 @@
-# TÜBİTAK Ekonomik Göstergeler Tahmin Projesi
+# Turkish Economic Indicators Forecasting System
 
-## 📊 Proje Açıklaması
+> **Research project supported by TÜBİTAK (The Scientific and Technological Research Council of Turkey)**
 
-Bu proje, Türkiye'nin temel ekonomik göstergeleri olan döviz kuru, enflasyon ve faiz oranlarının ARIMA modeli ile tahmin edilmesi ve siyasi gündem olaylarının bu göstergeler üzerindeki etkilerinin analiz edilmesi amacıyla geliştirilmiştir.
-
-### 🎯 Proje Hedefleri
-
-- **Veri Toplama**: TCMB, TÜİK ve BDDK'dan otomatik veri çekimi
-- **Tahmin Modeli**: ARIMA modeli ile ekonomik gösterge tahmini
-- **Duygu Analizi**: Haber metinlerinin NLP ile analizi
-- **Görselleştirme**: İnteraktif dashboard ve raporlama
-- **Performans**: 2 saniye altında yanıt, 64MB altında bellek kullanımı
-
-## 📋 Proje Bilgileri
-
-- **Geliştirici**: [Öğrenci Adı] - [Üniversite Adı] [Bölüm]
-- **Danışman**: [Danışman Adı]
-- **TÜBİTAK Proje No**: [Proje Numarası]
-- **Başlangıç Tarihi**: 2024
-- **Süre**: 8 Ay
-- **Metodoloji**: Agile (2 haftalık sprintler)
-
-## 🏗️ Proje Yapısı
-
-```
-├── config/                 # Konfigürasyon dosyaları
-│   ├── config.py          # Ana konfigürasyon
-│   └── environment_template.txt # Çevre değişkenleri şablonu
-├── src/                   # Kaynak kod
-│   ├── data_collection/   # Veri toplama modülleri
-│   │   └── tcmb_collector.py # TCMB veri çekici
-│   ├── models/            # Tahmin modelleri
-│   │   └── arima_model.py # ARIMA tahmin modeli
-│   ├── nlp_analysis/      # Doğal dil işleme
-│   │   └── sentiment_analyzer.py # Duygu analizi
-│   ├── visualization/     # Görselleştirme
-│   └── utils/             # Yardımcı fonksiyonlar
-├── data/                  # Veri dosyaları
-│   ├── raw/              # Ham veriler
-│   ├── processed/        # İşlenmiş veriler
-│   └── external/         # Harici veriler
-├── tests/                 # Test dosyaları
-├── logs/                  # Log dosyaları
-├── main.py               # Ana uygulama
-├── requirements.txt      # Python bağımlılıkları
-├── TODO.md              # Proje görev listesi
-└── README.md            # Bu dosya
-```
-
-## 🚀 Kurulum
-
-### 1. Projeyi İndirin
-```bash
-git clone [proje-repo-url]
-cd ekonomik-gostergeler-tahmin
-```
-
-### 2. Python Sanal Ortam Oluşturun
-```bash
-python -m venv venv
-
-# Windows
-venv\Scripts\activate
-
-# Linux/Mac
-source venv/bin/activate
-```
-
-### 3. Bağımlılıkları Yükleyin
-```bash
-pip install -r requirements.txt
-```
-
-### 4. Konfigürasyonu Ayarlayın
-```bash
-# Çevre değişkenlerini ayarlayın (config/environment_template.txt'yi inceleyin)
-# TCMB API anahtarınızı edinin: https://evds2.tcmb.gov.tr/
-```
-
-### 5. Projeyi Çalıştırın
-```bash
-python main.py
-```
-
-## 🔧 Kullanım
-
-### Ana Menü Seçenekleri
-
-1. **Veri Toplama Testi**: TCMB veri çekme modülünü test eder
-2. **ARIMA Model Testi**: Tahmin modeli test edilir
-3. **NLP Analiz Testi**: Türkçe duygu analizi test edilir
-
-### Modül Bazında Kullanım
-
-#### TCMB Veri Toplama
-```python
-from src.data_collection.tcmb_collector import TCMBCollector
-
-collector = TCMBCollector(api_key="your_api_key")
-data = collector.get_exchange_rates("01-01-2024", "31-12-2024")
-```
-
-#### ARIMA Tahmin
-```python
-from src.models.arima_model import ARIMAForecaster
-
-forecaster = ARIMAForecaster()
-forecaster.fit(data)
-forecast = forecaster.forecast(steps=30)
-```
-
-#### Duygu Analizi
-```python
-from src.nlp_analysis.sentiment_analyzer import TurkishSentimentAnalyzer
-
-analyzer = TurkishSentimentAnalyzer()
-result = analyzer.analyze_article(title="Başlık", content="İçerik")
-```
-
-## 📊 Veri Kaynakları
-
-### TCMB (Türkiye Cumhuriyet Merkez Bankası)
-- **API**: https://evds2.tcmb.gov.tr/
-- **Veriler**: USD/TRY, EUR/TRY, politika faizi, repo faizi, para arzı
-- **Format**: JSON
-- **Güncelleme**: Günlük
-
-### TÜİK (Türkiye İstatistik Kurumu)
-- **Web**: https://data.tuik.gov.tr/
-- **Veriler**: TÜFE, ÜFE, işsizlik, GSYİH
-- **Format**: Web scraping
-- **Güncelleme**: Aylık
-
-### BDDK (Bankacılık Düzenleme ve Denetleme Kurumu)
-- **Web**: https://www.bddk.org.tr/
-- **Veriler**: Kredi faizleri, mevduat faizleri
-- **Format**: Web scraping
-- **Güncelleme**: Haftalık
-
-## 🤖 Metodoloji
-
-### ARIMA Modeli
-- **AR (Autoregressive)**: Geçmiş değerlerin etkisi
-- **I (Integrated)**: Durağanlık için fark alma
-- **MA (Moving Average)**: Geçmiş hataların etkisi
-- **Parametre Optimizasyonu**: AIC ve BIC kriterleri
-- **Validasyon**: Çapraz doğrulama ve walk-forward testing
-
-### NLP Analizi
-- **Dil**: Türkçe
-- **Kütüphaneler**: NLTK, TextBlob, spaCy
-- **Özellikler**: 
-  - Metin ön işleme
-  - Anahtar kelime çıkarma
-  - Duygu analizi (pozitif, negatif, nötr)
-  - Ekonomik sınıflandırma
-
-## 📈 Performans Hedefleri
-
-- **Yanıt Süresi**: < 2 saniye
-- **Bellek Kullanımı**: < 64 MB
-- **Test Kapsamı**: > %90
-- **Tahmin Doğruluğu**: MAPE < %15
-- **Sistem Çalışma Oranı**: > %99.5
-
-## 🧪 Test Etme
-
-### Unit Testler
-```bash
-pytest tests/unit/ -v
-```
-
-### Integration Testler
-```bash
-pytest tests/integration/ -v
-```
-
-### Coverage Raporu
-```bash
-pytest --cov=src --cov-report=html
-```
-
-## 📝 Geliştirme Notları
-
-### Sprint Planlaması (2 haftalık)
-- **Sprint 1-4**: Veri Toplama Modülleri
-- **Sprint 5-8**: ARIMA Model Geliştirme
-- **Sprint 9-12**: NLP ve Haber Analizi
-- **Sprint 13-16**: Görselleştirme
-- **Sprint 17-20**: Test ve Optimizasyon
-- **Sprint 21-24**: Dokümantasyon
-
-### Kod Standartları
-- **Linting**: flake8
-- **Formatting**: black
-- **Docstring**: Google style
-- **Type Hints**: Python 3.9+
-
-## 🛠️ Teknoloji Stack
-
-### Backend
-- **Python**: 3.9+
-- **Veri İşleme**: pandas, numpy
-- **İstatistik**: statsmodels, scikit-learn
-- **NLP**: nltk, spacy, textblob
-- **Web Scraping**: requests, beautifulsoup4
-
-### Veritabanı
-- **Development**: SQLite
-- **Production**: PostgreSQL
-
-### Görselleştirme
-- **Grafikler**: matplotlib, seaborn, plotly
-- **Dashboard**: Streamlit
-
-### DevOps
-- **Test**: pytest
-- **CI/CD**: GitHub Actions
-- **Containerization**: Docker (opsiyonel)
-
-## 🚨 Bilinen Sorunlar
-
-1. **TCMB API Rate Limiting**: Dakikada 100 istek sınırı
-2. **Türkçe NLP**: Sınırlı kaynak, manuel kelime listeleri kullanılıyor
-3. **Web Scraping**: Site değişikliklerine karşı hassas
-
-## 🔄 Güncellemeler
-
-### v1.0.0 (2024-01-01)
-- ✅ Proje yapısı oluşturuldu
-- ✅ TCMB veri çekme modülü
-- ✅ Temel ARIMA modeli
-- ✅ Türkçe duygu analizi
-
-### Planlanan Güncellemeler
-- 🔄 Dashboard geliştirme
-- 🔄 Gerçek zamanlı veri akışı
-- 🔄 İleri seviye NLP modelleri
-- 🔄 Otomatik rapor oluşturma
-
-## 📞 İletişim
-
-- **Geliştirici**: [Öğrenci Email]
-- **Danışman**: [Danışman Email]
-- **Üniversite**: [Üniversite Email]
-
-## 📄 Lisans
-
-Bu proje TÜBİTAK projesi kapsamında akademik amaçlarla geliştirilmiştir.
-Ticari kullanım için izin gereklidir.
-
-## 🙏 Teşekkürler
-
-- TÜBİTAK - Proje desteği
-- TCMB - Veri erişimi
-- [Üniversite Adı] - Akademik destek
-- Açık kaynak toplulukları - Kütüphaneler
+A production-grade machine learning system for forecasting key Turkish economic indicators — USD/TRY exchange rate, inflation (CPI), and central bank policy interest rate — using hybrid time-series models, NLP-driven news sentiment analysis, and real-time data pipelines.
 
 ---
 
-**Not**: Bu proje eğitim amaçlıdır ve gerçek finansal yatırım kararları için kullanılmamalıdır. 
+## Forecast Accuracy
+
+| Indicator | Model | MAPE |
+|-----------|-------|------|
+| USD/TRY Exchange Rate | Hybrid ARIMA-SVR | **3.45%** |
+| Inflation (CPI) | ARIMA + Sentiment | **9.82%** |
+| Policy Interest Rate | ARIMA + Sentiment | **9.52%** |
+
+All models achieve **< 10% MAPE** validated through walk-forward backtesting and hold-out testing.
+
+---
+
+## Architecture
+
+```
+┌──────────────────────────────────────────────────────────┐
+│                  React / TypeScript Dashboard             │
+│             (Vite + Tailwind + Lightweight Charts)        │
+├──────────────────────────────────────────────────────────┤
+│                      Flask REST API                       │
+├───────────┬───────────┬───────────────┬──────────────────┤
+│   Data    │  Models   │     NLP       │   Validation     │
+│  Pipeline │  Engine   │  Sentiment    │   Framework      │
+├───────────┼───────────┼───────────────┼──────────────────┤
+│ TCMB API  │ ARIMA     │ Claude AI     │ Walk-Forward     │
+│ NewsAPI   │ Prophet   │ TextBlob      │ Cross-Validation │
+│ Web       │ XGBoost   │ Turkish NLP   │ Backtesting      │
+│ Scraping  │ LightGBM  │ Keyword Dict  │ Hold-out         │
+│ CSV Data  │ LSTM      │               │ Stress Testing   │
+│           │ SVR       │               │                  │
+├───────────┴───────────┴───────────────┴──────────────────┤
+│                        MongoDB                            │
+└──────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Key Features
+
+### Multi-Model Forecasting Engine
+- **ARIMA** with automatic parameter optimization via pmdarima
+- **Hybrid ARIMA-SVR** methodology combining linear and non-linear patterns
+- **Prophet**, **XGBoost**, **LightGBM**, and **LSTM** neural networks
+- Ensemble methods with weighted model averaging
+
+### NLP-Driven Sentiment Analysis
+- Real-time Turkish economic news collection via NewsAPI
+- Claude AI integration for contextual sentiment scoring
+- Sentiment multiplier applied to base ARIMA forecasts
+- Turkish-specific keyword dictionaries for economic context
+
+### Automated Data Pipeline
+- TCMB EVDS API (Turkish Central Bank) for official economic data
+- Web scraping for historical exchange rate data
+- Multi-source data integration and preprocessing
+- Scheduled data collection with automatic model retraining
+
+### Validation Framework
+- Walk-forward and rolling-window backtesting
+- Time-series adapted K-fold cross-validation
+- MAPE, MAE, RMSE metrics with configurable accuracy thresholds
+- Regime-aware data windowing and Winsorization for outlier handling
+
+### Web Dashboard
+- Interactive forecast charts with TradingView Lightweight Charts
+- Multi-indicator monitoring with real-time updates
+- News sentiment summary panel
+- Responsive design (React + TypeScript + Tailwind CSS)
+
+### Reporting & Export
+- Automated PDF report generation (ReportLab)
+- Excel export with formatted tables (openpyxl)
+- Comparative model performance analysis
+
+---
+
+## Tech Stack
+
+| Layer | Technologies |
+|-------|-------------|
+| **Frontend** | React, TypeScript, Vite, Tailwind CSS, Lightweight Charts |
+| **Backend** | Python 3.10+, Flask, Gunicorn |
+| **ML / Forecasting** | statsmodels, pmdarima, scikit-learn, Prophet, XGBoost, LightGBM, TensorFlow/Keras |
+| **NLP** | Anthropic Claude API, TextBlob |
+| **Database** | MongoDB (PyMongo) |
+| **Data Sources** | TCMB EVDS API, NewsAPI, Web Scraping |
+| **Testing** | pytest, pytest-cov |
+| **CI/CD** | GitHub Actions |
+
+---
+
+## Project Structure
+
+```
+├── app.py                              # Flask REST API server
+├── main.py                             # CLI dashboard & admin tool
+├── config/
+│   └── config.py                       # Centralized configuration
+├── src/
+│   ├── core/
+│   │   └── economic_analyzer.py        # Multi-indicator coordinator
+│   ├── models/
+│   │   ├── arima_model.py              # Base ARIMA forecaster
+│   │   ├── inflation_forecaster.py     # Inflation-tuned model
+│   │   ├── interest_rate_forecaster.py # Interest rate model
+│   │   ├── advanced_forecaster.py      # Prophet, XGBoost, LSTM
+│   │   ├── svr_model.py               # Support Vector Regression
+│   │   └── model_validator.py          # Validation framework
+│   ├── services/
+│   │   ├── news_api_service.py         # News + Claude AI integration
+│   │   └── multi_indicator_service.py  # Cross-indicator analysis
+│   ├── data_collection/
+│   │   ├── tcmb_data_collector.py      # Central Bank API client
+│   │   ├── turkish_financial_scraper.py
+│   │   ├── csv_processor.py
+│   │   └── data_integration.py         # Multi-source pipeline
+│   ├── nlp_analysis/
+│   │   └── sentiment_analyzer.py       # Turkish sentiment engine
+│   ├── visualization/
+│   │   └── forecast_visualizer.py      # Matplotlib charts
+│   ├── analysis/
+│   │   └── comparative_analyzer.py     # Model comparison
+│   ├── systems/
+│   │   └── autonomous_forecaster.py    # End-to-end pipeline
+│   ├── testing/
+│   │   ├── backtesting.py              # Walk-forward testing
+│   │   └── stress_tester.py            # Model stress tests
+│   └── utils/
+│       ├── mongodb_manager.py          # Database operations
+│       ├── accuracy_calculator.py      # MAPE/MAE/RMSE
+│       ├── data_preprocessor.py        # Data cleaning
+│       ├── report_exporter.py          # PDF/Excel generation
+│       └── ...
+├── frontend/                           # React/TypeScript UI
+│   ├── src/
+│   │   ├── App.tsx
+│   │   └── components/
+│   │       ├── ChartPanel.tsx          # Interactive forecast charts
+│   │       ├── IndicatorCard.tsx       # Indicator display cards
+│   │       ├── NewsSummary.tsx         # Sentiment summary
+│   │       └── ...
+│   └── vite.config.ts
+└── tests/                              # Test suite
+```
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+- Python 3.10+
+- Node.js 18+
+- MongoDB 6.0+
+
+### Installation
+
+```bash
+git clone https://github.com/<your-username>/turkish-economic-forecasting.git
+cd turkish-economic-forecasting
+
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+
+pip install -r requirements.txt
+
+cd frontend && npm install && cd ..
+```
+
+### Configuration
+
+Create a `.env` file in the project root:
+
+```env
+NEWSAPI_KEY=your_newsapi_key
+CLAUDE_API_KEY=your_claude_api_key
+TCMB_API_KEY=your_tcmb_api_key
+
+MONGODB_HOST=localhost
+MONGODB_PORT=27017
+MONGODB_DB=economic_data
+```
+
+### Running
+
+```bash
+# Backend API
+python app.py
+
+# Frontend dev server (separate terminal)
+cd frontend && npm run dev
+
+# Or use the CLI dashboard
+python main.py
+```
+
+Dashboard: `http://localhost:5000` | Frontend dev: `http://localhost:5173`
+
+---
+
+## Methodology
+
+1. **Data Collection** — Historical data from TCMB, web scraping, and curated CSV datasets
+2. **Preprocessing** — Regime-aware windowing (post-2021), log transformation, Winsorization
+3. **Model Training** — Auto-ARIMA optimization per indicator, hybrid ARIMA-SVR fitting
+4. **Sentiment Analysis** — Real-time news scoring via Claude AI with Turkish NLP
+5. **Forecast Generation** — Base forecast adjusted by news sentiment multiplier
+6. **Validation** — Walk-forward backtesting, hold-out testing, cross-validation
+
+---
+
+## Testing
+
+```bash
+pytest                                  # Run all tests
+pytest --cov=src --cov-report=html      # With coverage report
+python test_all_mape.py                 # Validate MAPE targets
+```
+
+---
+
+## Acknowledgments
+
+This research was supported by [TÜBİTAK](https://www.tubitak.gov.tr/) (The Scientific and Technological Research Council of Turkey) under their competitive research grant program.
+
+---
+
+## License
+
+All rights reserved. This project was developed as part of a TÜBİTAK-funded research initiative.

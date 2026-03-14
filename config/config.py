@@ -12,8 +12,16 @@ TÜBİTAK Proje No: [Proje Numarası]
 """
 
 import os
-from datetime import datetime, timedelta
 from pathlib import Path
+from dotenv import load_dotenv
+
+# .env dosyasını proje kökünden yükle (NEWS_API_KEY, CLAUDE_API_KEY vb.)
+_env_path = Path(__file__).resolve().parent.parent / ".env"
+load_dotenv(dotenv_path=_env_path, encoding='utf-8')
+# CWD'deki .env'i de dene (alternatif)
+load_dotenv(encoding='utf-8')
+
+from datetime import datetime, timedelta
 
 # =============================================================================
 # TEMEL PROJE AYARLARI
@@ -46,13 +54,37 @@ PROCESSED_DATA_DIR = DATA_DIR / "processed"
 EXTERNAL_DATA_DIR = DATA_DIR / "external"
 
 # =============================================================================
+# API ANAHTARLARI VE DIŞ SERVİSLER
+# =============================================================================
+
+# News API ayarları (.env'de NEWS_API_KEY veya NEWSAPI_KEY kullanılabilir)
+NEWS_API_CONFIG = {
+    "api_key": (os.getenv("NEWS_API_KEY") or os.getenv("NEWSAPI_KEY") or "").strip(),
+    "base_url": "https://newsapi.org/v2/everything",
+    "language": "tr",  # Türkçe haberler
+    "sort_by": "publishedAt",
+    "page_size": 20,  # 20 haber
+    "domains": "hurriyet.com.tr,milliyet.com.tr,sabah.com.tr,haberturk.com.tr,ntv.com.tr,cnnturk.com.tr",  # Türk medyası
+    "keywords": ["ekonomi", "döviz", "enflasyon", "faiz", "merkez bankası", "tcmb", "bddk", "türk lirası", "dolar", "euro"]
+}
+
+# Claude API ayarları
+CLAUDE_API_CONFIG = {
+    "api_key": (os.getenv("CLAUDE_API_KEY") or "").strip(),
+    # Tek seçenek: kullanıcı talebiyle sabitlenen model kimliği
+    "model": "claude-sonnet-4-5-20250929",
+    "max_tokens": 1000,
+    "temperature": 0.3  # Daha tutarlı analiz için düşük temperature
+}
+
+# =============================================================================
 # VERİ KAYNAKLARI AYARLARI
 # =============================================================================
 
 # TCMB (Türkiye Cumhuriyet Merkez Bankası) API ayarları
 TCMB_CONFIG = {
     "base_url": "https://evds2.tcmb.gov.tr/service/evds/",
-    "api_key": os.getenv("TCMB_API_KEY", "YOUR_API_KEY_HERE"),  # .env dosyasından okunacak
+    "api_key": os.getenv("TCMB_API_KEY", ""),  # .env dosyasından okunacak
     "rate_limit": 100,  # dakikada maksimum istek sayısı
     "timeout": 30,  # saniye cinsinden timeout süresi
     "retry_count": 3,  # hata durumunda yeniden deneme sayısı
@@ -174,27 +206,61 @@ NLP_CONFIG = {
 # VERİTABANI AYARLARI
 # =============================================================================
 
-# Veritabanı konfigürasyonu - geliştirme için SQLite, production için PostgreSQL
-DATABASE_CONFIG = {
+# MongoDB konfigürasyonu - ana veritabanı olarak MongoDB kullanılacak
+MONGODB_CONFIG = {
     "development": {
-        "type": "sqlite",
-        "path": str(DATA_DIR / "economic_data.db"),
-        "echo": False  # SQL sorguları loglanacak mı?
+        "type": "mongodb",
+        "host": os.getenv("MONGODB_HOST", "localhost"),
+        "port": int(os.getenv("MONGODB_PORT", 27017)),
+        "database": os.getenv("MONGODB_DB", "economic_data_dev"),
+        "username": os.getenv("MONGODB_USER", ""),
+        "password": os.getenv("MONGODB_PASS", ""),
+        "auth_source": os.getenv("MONGODB_AUTH_SOURCE", "admin"),
+        "max_pool_size": 10,
+        "min_pool_size": 1,
+        "max_idle_time_ms": 30000,
+        "server_selection_timeout_ms": 5000,
+        "connect_timeout_ms": 10000,
+        "socket_timeout_ms": 20000
     },
     
     "production": {
-        "type": "postgresql",
-        "host": os.getenv("DB_HOST", "localhost"),
-        "port": os.getenv("DB_PORT", 5432),
-        "database": os.getenv("DB_NAME", "yerdi"),
-        "username": os.getenv("DB_USER", "erdinatalihan"),
-        "password": os.getenv("DB_PASS", "yeni_sifre"), # TODO: Lütfen burayı kendi şifrenizle güncelleyin
-        "pool_size": 10,
-        "max_overflow": 20
+        "type": "mongodb",
+        "host": os.getenv("MONGODB_HOST", "localhost"),
+        "port": int(os.getenv("MONGODB_PORT", 27017)),
+        "database": os.getenv("MONGODB_DB", "economic_data_prod"),
+        "username": os.getenv("MONGODB_USER", ""),
+        "password": os.getenv("MONGODB_PASS", ""),
+        "auth_source": os.getenv("MONGODB_AUTH_SOURCE", "admin"),
+        "max_pool_size": 20,
+        "min_pool_size": 5,
+        "max_idle_time_ms": 30000,
+        "server_selection_timeout_ms": 5000,
+        "connect_timeout_ms": 10000,
+        "socket_timeout_ms": 20000,
+        "retry_writes": True,
+        "ssl": os.getenv("MONGODB_SSL", "false").lower() == "true"
     }
 }
 
-# Tablo isimleri
+
+
+# MongoDB koleksiyon isimleri
+MONGODB_COLLECTIONS = {
+    "exchange_rates": "exchange_rates",
+    "inflation_data": "inflation_data", 
+    "interest_rates": "interest_rates",
+    "political_events": "political_events",
+    "news_articles": "news_articles",
+    "model_predictions": "model_predictions",
+    "model_performance": "model_performance",
+    "sentiment_analysis": "sentiment_analysis",
+    "economic_indicators": "economic_indicators",
+    "analysis_results": "analysis_results",
+    "timeseries_validation": "timeseries_validation"
+}
+
+# Eski SQL tablo isimleri (geriye dönük uyumluluk için)
 TABLE_NAMES = {
     "exchange_rates": "exchange_rates",
     "inflation_data": "inflation_data", 
@@ -290,7 +356,7 @@ TEST_CONFIG = {
     
     # Test verileri
     "test_data_size": 1000,  # test için kullanılacak veri miktarı
-    "mock_api_responses": True,
+    "mock_api_responses": False,  # Mock data yasak - sadece gerçek API yanıtları kullanılmalı
     
     # Performans testleri
     "load_test_users": 10,
@@ -316,6 +382,17 @@ DEBUG_CONFIG = {
 # Environment variables kontrolü
 REQUIRED_ENV_VARS = [
     "TCMB_API_KEY",
+    "MONGODB_HOST", 
+    "MONGODB_DB",
+    "MONGODB_USER",
+    "MONGODB_PASS"
+]
+
+# Opsiyonel environment variables
+OPTIONAL_ENV_VARS = [
+    "MONGODB_PORT",
+    "MONGODB_AUTH_SOURCE",
+    "MONGODB_SSL",
     "DB_HOST", 
     "DB_USER",
     "DB_PASS"
@@ -326,7 +403,7 @@ REQUIRED_ENV_VARS = [
 # =============================================================================
 
 NEWSAPI_CONFIG = {
-    "api_key": os.getenv("NEWSAPI_KEY", "e3dd5088b7cd4b68982443e2c2dc0db7"),
+    "api_key": os.getenv("NEWSAPI_KEY", ""),
     "base_url": "https://newsapi.org/v2/",
     "default_language": "tr",
     "page_size": 100

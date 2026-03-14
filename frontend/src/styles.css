@@ -1,0 +1,179 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Tema değişkenleri */
+:root {
+  --bg-primary: #0f172a; /* slate-950 */
+  --bg-secondary: #1e293b; /* slate-800 */
+  --bg-card: rgba(30, 41, 59, 0.8); /* slate-800/80 */
+  --text-primary: #f1f5f9; /* slate-100 */
+  --text-secondary: #cbd5e1; /* slate-300 */
+  --text-muted: #94a3b8; /* slate-400 */
+  --border-color: #334155; /* slate-700 */
+  --brand-color: #6366f1; /* indigo-500 */
+  --brand-light: #818cf8; /* indigo-400 */
+}
+
+.light {
+  --bg-primary: #ffffff; /* white */
+  --bg-secondary: #f8fafc; /* slate-50 */
+  --bg-card: rgba(255, 255, 255, 0.9); /* white/90 */
+  --text-primary: #1e293b; /* slate-800 */
+  --text-secondary: #475569; /* slate-600 */
+  --text-muted: #64748b; /* slate-500 */
+  --border-color: #cbd5e1; /* slate-300 */
+  --brand-color: #2563eb; /* blue-600 */
+  --brand-light: #3b82f6; /* blue-500 */
+}
+
+body {
+  @apply antialiased;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
+  /* Mobil için touch optimizasyonu */
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* Grafik container için özel stiller */
+.chart-container {
+  width: 100% !important;
+  position: relative;
+  min-width: 0;
+  flex: 1 1 auto;
+  /* Mobil için overflow kontrolü */
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.chart-container > div {
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0;
+}
+
+/* Lightweight-charts canvas için genişlik garantisi */
+.chart-container canvas {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+/* TradingView logo ve attribution'ı tamamen gizle */
+.chart-container a[href*="tradingview.com"],
+.chart-container a[title*="TradingView"],
+.chart-container a[title*="Charting by TradingView"],
+.chart-container a[href*="tradingview"],
+.chart-container svg[title*="TradingView"],
+.chart-container svg title:contains("TradingView") {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  position: absolute !important;
+  left: -9999px !important;
+}
+
+/* Lightweight-charts içindeki tüm linkleri ve SVG'leri kontrol et */
+.chart-container > div > a,
+.chart-container a[href] {
+  display: none !important;
+}
+
+/* Grafik container içindeki tüm SVG elementlerini kontrol et */
+.chart-container svg {
+  overflow: visible;
+}
+
+/* TradingView logo SVG'lerini gizle */
+.chart-container svg[width="104"],
+.chart-container svg[height="16"] {
+  display: none !important;
+}
+
+/* ========== RAPOR YAZDIRMA: Dark mode + sayfa bölünmesi önleme ========== */
+@media print {
+  /* Yazdırmada her zaman koyu tema (rapor görünümü) */
+  body,
+  #root,
+  .min-h-screen,
+  .print-report-card,
+  .print-report-block {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  body {
+    background: #0f172a !important;
+    color: #f1f5f9 !important;
+  }
+
+  #root,
+  .min-h-screen {
+    background: #0f172a !important;
+    color: #f1f5f9 !important;
+  }
+
+  /* Kart ve blokların ortadan bölünmesini engelle */
+  .print-report-card,
+  .print-report-block,
+  section.rounded-3xl,
+  aside.rounded-3xl {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  /* Kart arka planları koyu */
+  .print-report-card,
+  .print-report-block,
+  .bg-white\/90,
+  .dark\:bg-slate-900\/80 {
+    background: #1e293b !important;
+    color: #f1f5f9 !important;
+    border-color: #334155 !important;
+  }
+
+  /* Toolbar / butonlar yazdırmada gizle */
+  .no-print {
+    display: none !important;
+  }
+
+  /* Başlık ve metin renkleri */
+  .print-report-card h2,
+  .print-report-card .text-slate-900,
+  .print-report-block .text-slate-900 {
+    color: #f1f5f9 !important;
+  }
+  .print-report-card .text-slate-600,
+  .print-report-card .text-slate-500,
+  .print-report-block .text-slate-600,
+  .print-report-block .text-slate-500 {
+    color: #94a3b8 !important;
+  }
+  .print-report-card .text-blue-600,
+  .print-report-card .text-blue-700,
+  .print-report-block .text-blue-600 {
+    color: #818cf8 !important;
+  }
+
+  /* Grafik alanı yazdırmada bölünmesin */
+  .chart-container {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  /* Kart içi kutular (metrik, haber çarpanı, validasyon) koyu */
+  .print-report-card .rounded-2xl,
+  .print-report-block .rounded-2xl {
+    background: #334155 !important;
+    border-color: #475569 !important;
+  }
+}
+

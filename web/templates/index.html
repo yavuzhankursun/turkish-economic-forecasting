@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TÜBİTAK Ekonomik Göstergeler Tahmin Sistemi</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    
+    <!-- Plotly.js -->
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">
+                <i class="bi bi-graph-up-arrow"></i> TÜBİTAK Tahmin Sistemi
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/">Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/data">Veri</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/multi">Çok Göstergeli</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container-fluid mt-4">
+        <!-- Sistem Sağlık Durumu -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="bi bi-heart-pulse"></i> Sistem Durumu</h5>
+                        <button class="btn btn-sm btn-outline-primary" onclick="checkHealth()">
+                            <i class="bi bi-arrow-clockwise"></i> Yenile
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div class="row" id="healthStatus">
+                            <div class="col-md-3">
+                                <div class="health-card">
+                                    <i class="bi bi-database"></i>
+                                    <h6>MongoDB</h6>
+                                    <span class="badge bg-secondary">Kontrol ediliyor...</span>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="health-card">
+                                    <i class="bi bi-newspaper"></i>
+                                    <h6>News API</h6>
+                                    <span class="badge bg-secondary">Kontrol ediliyor...</span>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="health-card">
+                                    <i class="bi bi-robot"></i>
+                                    <h6>Claude API</h6>
+                                    <span class="badge bg-secondary">Kontrol ediliyor...</span>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="health-card">
+                                    <i class="bi bi-graph-up"></i>
+                                    <h6>ARIMA Model</h6>
+                                    <span class="badge bg-secondary">Kontrol ediliyor...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ana İşlemler -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card action-card">
+                    <div class="card-body text-center">
+                        <i class="bi bi-graph-up-arrow action-icon text-primary"></i>
+                        <h5 class="card-title">ARIMA Tahmini</h5>
+                        <p class="card-text">USD/TRY kuru için ARIMA modeli ile tahmin yapın</p>
+                        <button class="btn btn-primary" onclick="runARIMAForecast()">
+                            <i class="bi bi-play-fill"></i> Tahmin Yap
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card action-card">
+                    <div class="card-body text-center">
+                        <i class="bi bi-newspaper action-icon text-success"></i>
+                        <h5 class="card-title">Haber Analizi</h5>
+                        <p class="card-text">Güncel ekonomi haberlerini Claude AI ile analiz edin</p>
+                        <button class="btn btn-success" onclick="runNewsAnalysis()">
+                            <i class="bi bi-search"></i> Analiz Et
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card action-card">
+                    <div class="card-body text-center">
+                        <i class="bi bi-cpu action-icon text-warning"></i>
+                        <h5 class="card-title">Otonom Sistem</h5>
+                        <p class="card-text">Tam otomatik tahmin sistemi (ARIMA + News + Claude)</p>
+                        <button class="btn btn-warning" onclick="runAutonomousSystem()">
+                            <i class="bi bi-lightning-fill"></i> Başlat
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ana Grafik -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center">
+                            <h5 class="mb-0 me-3"><i class="bi bi-graph-up"></i> Ekonomik Gösterge Tahmini</h5>
+                            <select class="form-select form-select-sm" style="width: 200px;" id="indicatorSelector" onchange="changeIndicator()">
+                                <option value="usd_try">USD/TRY Kuru</option>
+                                <option value="inflation">Enflasyon Oranı</option>
+                                <option value="interest_rate">Faiz Oranı</option>
+                            </select>
+                        </div>
+                        <div>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="loadCurrentIndicator()">
+                                <i class="bi bi-arrow-clockwise"></i> Yükle
+                            </button>
+                            <button class="btn btn-sm btn-outline-primary" onclick="downloadChart()">
+                                <i class="bi bi-download"></i> İndir
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div id="mainChart" style="width:100%; height:600px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- En Son Veriler ve Haberler -->
+        <div class="row mb-4 equal-height-row">
+            <div class="col-md-4">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="bi bi-table"></i> En Son Veriler</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                            <table class="table table-striped table-hover" id="dataTable">
+                                <thead>
+                                    <tr>
+                                        <th>Tarih</th>
+                                        <th>USD/TRY</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td colspan="2" class="text-center">
+                                            <div class="spinner-border text-primary" role="status">
+                                                <span class="visually-hidden">Yükleniyor...</span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="bi bi-newspaper"></i> Son Ekonomi Haberleri</h5>
+                        <button class="btn btn-sm btn-outline-primary" onclick="loadNewsHeadlines()">
+                            <i class="bi bi-arrow-clockwise"></i>
+                        </button>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="news-container p-3" id="newsContainer">
+                            <div class="text-center py-4">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Haberler yükleniyor...</span>
+                                </div>
+                                <p class="text-muted mt-2">Haberler yükleniyor...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="bi bi-bar-chart"></i> Model Performansı</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="metricsDisplay">
+                            <p class="text-muted">Tahmin yapıldıktan sonra metrikler burada görünecek...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="bi bi-emoji-smile"></i> Sentiment Analizi</h5>
+                    </div>
+                    <div class="card-body" id="sentimentDisplay">
+                        <p class="text-muted text-center">Haber analizi yapıldıktan sonra görünecek...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3">
+        <div id="liveToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header">
+                <strong class="me-auto" id="toastTitle">Bildirim</strong>
+                <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+            </div>
+            <div class="toast-body" id="toastBody">
+                Mesaj
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Modal -->
+    <div class="modal fade" id="loadingModal" data-bs-backdrop="static" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-body text-center p-5">
+                    <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;" role="status">
+                        <span class="visually-hidden">Yükleniyor...</span>
+                    </div>
+                    <h5 id="loadingMessage">İşlem devam ediyor...</h5>
+                    <p class="text-muted mb-0">Lütfen bekleyin</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap 5 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Custom JS -->
+    <script src="{{ url_for('static', filename='js/api.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/smooth-scroll.js') }}"></script>
+</body>
+</html>
+

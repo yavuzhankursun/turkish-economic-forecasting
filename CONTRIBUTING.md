@@ -7,7 +7,7 @@ Thank you for your interest in contributing to this project. Contributions of al
 If you find a bug, please open an issue and include:
 
 - A clear description of the problem
-- Sdets to reproduce the issue
+- Steps to reproduce the issue
 - Expected vs actual behavior
 - Your environment (OS, language version, etc.)
 

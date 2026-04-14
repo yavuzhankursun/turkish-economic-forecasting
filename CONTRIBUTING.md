@@ -33,7 +33,7 @@ Have an idea for an improvement? Open an issue with:
 ## Code Style
 
 - Follow the conventions already present in the codebase
--- Keep changes focused -- one feature or fix per PR
+- Keep changes focused -- one feature or fix per PR
 - Write clear commit messages
 - Add comments only where the code is not self-explanatory
 
